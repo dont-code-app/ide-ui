@@ -16464,9 +16464,11 @@ class TimeFieldsComponent extends _dontcode_plugin_common__WEBPACK_IMPORTED_MODU
     }
   }
   localizeLongDate(value) {
+    if (value != null && Number.isNaN(value.valueOf())) return "";
     return this.longConverter.format(value);
   }
   localizeShortDate(value) {
+    if (value != null && Number.isNaN(value.valueOf())) return "";
     return this.shortConverter.format(value);
   }
   canProvide(type) {
@@ -16939,6 +16941,9 @@ class DontCodeApiStoreProvider extends _dontcode_core__WEBPACK_IMPORTED_MODULE_0
       return Promise.reject("No entity found at position " + position);
     }
     const id = data._id;
+    // Reconverts dates or Ids
+    const specialFields = _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.findSpecialFields(position, entity);
+    _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.cleanUpDataBeforeSaving([data], specialFields);
     if (id != undefined) {
       return (0,rxjs__WEBPACK_IMPORTED_MODULE_3__.lastValueFrom)(this.http.put(this.apiUrl + '/' + entity.name + '/' + id, data, {
         observe: "body",
@@ -16960,17 +16965,21 @@ class DontCodeApiStoreProvider extends _dontcode_core__WEBPACK_IMPORTED_MODULE_0
       observe: "body",
       responseType: "json"
     });
-    return (0,rxjs__WEBPACK_IMPORTED_MODULE_3__.lastValueFrom)(obs);
+    const specialFields = _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.findSpecialFields(position, entity);
+    return (0,rxjs__WEBPACK_IMPORTED_MODULE_3__.lastValueFrom)(obs).then(value => {
+      _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.cleanUpLoadedData([value], specialFields);
+      return value;
+    });
   }
   deleteEntity(position, key) {
     const entity = this.modelMgr.findAtPosition(position, false);
     if (entity === null) {
       return Promise.reject("No entity found at position " + position);
     }
-    return this.http.delete(this.apiUrl + '/' + entity.name + '/' + key, {
+    return (0,rxjs__WEBPACK_IMPORTED_MODULE_3__.lastValueFrom)(this.http.delete(this.apiUrl + '/' + entity.name + '/' + key, {
       observe: "body",
       responseType: "json"
-    }).toPromise().then(value => {
+    })).then(value => {
       return true;
     });
   }
@@ -16979,10 +16988,14 @@ class DontCodeApiStoreProvider extends _dontcode_core__WEBPACK_IMPORTED_MODULE_0
     if (entity === null) {
       return (0,rxjs__WEBPACK_IMPORTED_MODULE_4__.throwError)(() => new Error("No entity found at position " + position));
     }
+    const specialFields = _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.findSpecialFields(position, entity);
     return this.http.get(this.apiUrl + '/' + entity.name, {
       observe: "body",
       responseType: "json"
     }).pipe((0,rxjs_operators__WEBPACK_IMPORTED_MODULE_2__.map)(value => {
+      _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.cleanUpLoadedData(value, specialFields);
+      return value;
+    }), (0,rxjs_operators__WEBPACK_IMPORTED_MODULE_2__.map)(value => {
       return _dontcode_core__WEBPACK_IMPORTED_MODULE_0__.StoreProviderHelper.applyFilters(value, ...criteria);
     }));
   }
